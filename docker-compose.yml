@@ -1,8 +1,7 @@
-version: "3.4"
-
 services:
   api:
-    image: ghcr.io/saleor/saleor:3.20
+    build:
+      context: ../saleor # Caminho relativo para o repositório local do Saleor
     ports:
       - 8000:8000
     restart: unless-stopped
@@ -15,7 +14,7 @@ services:
       - redis
       - jaeger
     volumes:
-      # shared volume between worker and api for media
+      - ../saleor:/app:rw # Monta o repositório local
       - saleor-media:/app/media
     env_file:
       - common.env
@@ -26,13 +25,16 @@ services:
       - ALLOWED_HOSTS=localhost,api
 
   dashboard:
-    image: ghcr.io/saleor/saleor-dashboard:latest
+    build:
+      context: ../saleor-dashboard # Caminho relativo para o repositório local do Saleor Dashboard
     ports:
       - 9000:80
     restart: unless-stopped
+    networks:
+      - saleor-backend-tier
 
   db:
-    image: library/postgres:15-alpine
+    image: library/postgres:13-alpine # O original é a versão 15 em vez de 13
     ports:
       - 5432:5432
     restart: unless-stopped
@@ -56,7 +58,8 @@ services:
       - saleor-redis:/data
 
   worker:
-    image: ghcr.io/saleor/saleor:3.20
+    build:
+      context: ../saleor # Caminho relativo para o repositório local do Saleor
     command: celery -A saleor --app=saleor.celeryconf:app worker --loglevel=info -B
     restart: unless-stopped
     networks:
@@ -68,7 +71,7 @@ services:
       - redis
       - mailpit
     volumes:
-      # shared volume between worker and api for media
+      - ../saleor:/app:rw # Monta o repositório local
       - saleor-media:/app/media
 
   jaeger:
@@ -80,7 +83,7 @@ services:
       - "5778:5778"
       - "16686:16686"
       - "14268:14268"
-      - "9411:9411"
+      - "7411:7411" #O original é 9411:9411
     restart: unless-stopped
     networks:
       - saleor-backend-tier
